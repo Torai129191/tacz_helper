@@ -37,31 +37,23 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-// ---- 建築ボトル100個ぶんのモデルと言語ファイルをビルド時に自動生成 ----
-def bottleShapes = [house: '家', tower: '塔', sniper: '狙撃台', wall: '防壁', pyramid: 'ピラミッド', bridge: '橋', deck: '高台', bunker: '掩体', arena: '闘技場', castle: '城']
-def bottlePalettes = [oak: ['オーク', 'oak_planks'], spruce: ['トウヒ', 'spruce_planks'], birch: ['シラカバ', 'birch_planks'], cobble: ['丸石', 'cobblestone'], stone: ['石レンガ', 'stone_bricks'], brick: ['レンガ', 'bricks'], sand: ['砂岩', 'sandstone'], quartz: ['クォーツ', 'quartz_block_side'], deepslate: ['深層岩', 'deepslate_bricks'], concrete: ['コンクリート', 'gray_concrete']]
+// ---- 建築ボトル1000個ぶんのアイテムモデルをビルド時に自動生成 ----
+// （GitHubのアップロードが1回100ファイルまでなので、自動で作る）
+def bottleShapes = ['house', 'tower', 'sniper', 'wall', 'pyramid', 'bridge', 'deck', 'bunker', 'arena', 'castle', 'cottage', 'mushroom', 'pagoda', 'torii', 'dome', 'lighthouse', 'treehouse', 'camp', 'rocket', 'ufo', 'slide', 'jumppark', 'maze', 'traproom', 'fountain']
+def bottlePalettes = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'darkoak', 'mangrove', 'cherry', 'bamboo', 'crimson', 'warped', 'cobble', 'mossy', 'stonebrick', 'brick', 'sand', 'redsand', 'quartz', 'prismarine', 'deepslate', 'blackstone', 'netherbrick', 'endstone', 'obsidian', 'mud', 'white', 'pink', 'red', 'orange', 'yellow', 'lime', 'green', 'cyan', 'lightblue', 'blue', 'purple', 'magenta', 'gray', 'black', 'gold']
 def generatedAssets = layout.buildDirectory.dir('generated/bottle-assets').get().asFile
 
 tasks.register('generateBottleAssets') {
     outputs.dir(generatedAssets)
     doLast {
         def itemDir = new File(generatedAssets, 'assets/taczhelper/models/item')
-        def langDir = new File(generatedAssets, 'assets/taczhelper/lang')
         itemDir.mkdirs()
-        langDir.mkdirs()
-        def lang = new LinkedHashMap<String, String>()
-        lang['block.taczhelper.spawn_point'] = 'スポーン地点ブロック'
-        lang['block.taczhelper.loot_spawner'] = 'ルートチェスト出現ブロック'
-        lang['block.taczhelper.game_settings'] = 'ゲーム設定ブロック'
-        lang['block.taczhelper.game_start'] = 'ゲーム開始ブロック'
-        bottleShapes.each { shapeId, shapeLabel ->
-            bottlePalettes.each { palId, info ->
+        bottleShapes.each { shapeId ->
+            bottlePalettes.each { palId ->
                 def id = "bottle_${shapeId}_${palId}"
-                lang["item.taczhelper.${id}".toString()] = "建築ボトル：${shapeLabel}（${info[0]}）".toString()
-                new File(itemDir, id + '.json').setText('{"parent":"minecraft:item/generated","textures":{"layer0":"minecraft:block/' + info[1] + '","layer1":"minecraft:item/experience_bottle"}}', 'UTF-8')
+                new File(itemDir, id + '.json').setText('{"parent":"minecraft:item/generated","textures":{"layer0":"taczhelper:item/bottle_body","layer1":"taczhelper:item/shape_' + shapeId + '"}}', 'UTF-8')
             }
         }
-        new File(langDir, 'en_us.json').setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(lang)), 'UTF-8')
     }
 }
 

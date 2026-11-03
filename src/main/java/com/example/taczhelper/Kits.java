@@ -8,9 +8,11 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class Kits {
@@ -64,6 +66,15 @@ public final class Kits {
         if (r.nextInt(3) == 0) out.add(new ItemStack(ARMOR_LOOT[r.nextInt(ARMOR_LOOT.length)]));
         if (r.nextInt(2) == 0) out.add(new ItemStack(Items.GOLDEN_APPLE, 1 + r.nextInt(2)));
         return out;
+    }
+
+    /** チェストにランダムなルートを入れる */
+    public static void fillChest(ChestBlockEntity chest, RandomSource r) {
+        List<ItemStack> loot = randomLoot(r);
+        List<Integer> slots = new ArrayList<>();
+        for (int i = 0; i < 27; i++) slots.add(i);
+        Collections.shuffle(slots);
+        for (int i = 0; i < loot.size(); i++) chest.setItem(slots.get(i), loot.get(i));
     }
 
     private static void armor(ServerPlayer p, Item head, Item chest, Item legs, Item feet) {
