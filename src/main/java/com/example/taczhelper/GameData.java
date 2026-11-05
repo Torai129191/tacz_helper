@@ -30,6 +30,14 @@ public class GameData extends SavedData {
         setDirty();
     }
 
+    /** dir=+1で次の値、-1で前の値 */
+    public void shift(Setting s, int dir) {
+        int i = s.ordinal();
+        int n = s.values.length;
+        idx[i] = ((idx[i] + dir) % n + n) % n;
+        setDirty();
+    }
+
     public void nextSetting() {
         current = (current + 1) % Setting.values().length;
     }

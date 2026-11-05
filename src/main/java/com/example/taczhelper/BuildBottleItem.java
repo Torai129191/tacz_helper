@@ -79,7 +79,7 @@ public class BuildBottleItem extends Item {
         tips.add(Component.literal("§7向いている方向に伸びていくよ"));
     }
 
-    /** 設計図の座標(x右, y上, z前)を、プレイヤーの向きに合わせて世界に置く */
+    /** 設計図の座標(x右, y上, z前)を、プレイヤーの向きに合わせて世界に置く（キューに積んで少しずつ） */
     private static final class WorldPlacer implements Blueprints.Placer {
         private final Level level;
         private final BlockPos origin;
@@ -109,44 +109,72 @@ public class BuildBottleItem extends Item {
             return Direction.NORTH;
         }
 
-        private BlockPos put(int x, int y, int z, BlockState state) {
-            BlockPos t = pos(x, y, z);
-            if (!level.isInWorldBounds(t)) return null;
-            if (level.getBlockState(t).getDestroySpeed(level, t) < 0) return null; // 岩盤などは壊さない
+        private boolean place(BlockPos t, BlockState state) {
+            if (!level.isInWorldBounds(t)) return false;
+            if (level.getBlockState(t).getDestroySpeed(level, t) < 0) return false; // 岩盤などは壊さない
             level.setBlock(t, state, 2);
-            return t;
+            return true;
         }
 
         @Override
         public void set(int x, int y, int z, Block b) {
-            BlockState s = b.defaultBlockState();
-            if (b instanceof LeavesBlock) s = s.setValue(LeavesBlock.PERSISTENT, true);
-            put(x, y, z, s);
+            BlockPos t = pos(x, y, z);
+            BuildQueue.add(() -> {
+                BlockState s = b.defaultBlockState();
+                if (b instanceof LeavesBlock) s = s.setValue(LeavesBlock.PERSISTENT, true);
+                place(t, s);
+            });
         }
 
         @Override
         public void stair(int x, int y, int z, Block b, int dir, boolean flip) {
-            put(x, y, z, b.defaultBlockState()
-                    .setValue(StairBlock.FACING, dir(dir))
-                    .setValue(StairBlock.HALF, flip ? Half.TOP : Half.BOTTOM));
+            BlockPos t = pos(x, y, z);
+            Direction d = dir(dir);
+            BuildQueue.add(() -> place(t, b.defaultBlockState()
+                    .setValue(StairBlock.FACING, d)
+                    .setValue(StairBlock.HALF, flip ? Half.TOP : Half.BOTTOM)));
         }
 
         @Override
         public void slab(int x, int y, int z, Block b, boolean top) {
-            put(x, y, z, b.defaultBlockState().setValue(SlabBlock.TYPE, top ? SlabType.TOP : SlabType.BOTTOM));
+            BlockPos t = pos(x, y, z);
+            BuildQueue.add(() -> place(t, b.defaultBlockState()
+                    .setValue(SlabBlock.TYPE, top ? SlabType.TOP : SlabType.BOTTOM)));
         }
 
         @Override
         public void ladder(int x, int y, int z, int dir) {
-            put(x, y, z, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, dir(dir)));
+            BlockPos t = pos(x, y, z);
+            Direction d = dir(dir);
+            BuildQueue.add(() -> place(t, Blocks.LADDER.defaultBlockState().setValue(LadderBlock.FACING, d)));
         }
 
         @Override
         public void chest(int x, int y, int z, int dir) {
-            BlockPos t = put(x, y, z, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, dir(dir)));
-            if (t != null && level.getBlockEntity(t) instanceof ChestBlockEntity chest) {
-                Kits.fillChest(chest, level.getRandom());
-            }
+            BlockPos t = pos(x, y, z);
+            Direction d = dir(dir);
+            BuildQueue.add(() -> {
+                if (place(t, Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, d))
+                        && level.getBlockEntity(t) instanceof ChestBlockEntity chest) {
+                    Kits.fillChest(chest, level.getRandom());
+                }
+            });
+        }
+
+        @Override
+        public void gimmick(int x, int y, int z, int kind) {
+            BlockPos t = pos(x, y, z);
+            BuildQueue.add(() -> {
+                Block b = switch (kind) {
+                    case Blueprints.JUMP -> ModBlocks.JUMP_PAD.get();
+                    case Blueprints.SPEED -> ModBlocks.SPEED_PAD.get();
+                    case Blueprints.CHECK -> ModBlocks.CHECKPOINT.get();
+                    case Blueprints.GOAL -> ModBlocks.GOAL.get();
+                    case Blueprints.CRUMBLE -> ModBlocks.CRUMBLE.get();
+                    default -> ModBlocks.HEAL_PAD.get();
+                };
+                place(t, b.defaultBlockState());
+            });
         }
     }
 }

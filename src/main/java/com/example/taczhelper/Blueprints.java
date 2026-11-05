@@ -19,7 +19,11 @@ public final class Blueprints {
         void ladder(int x, int y, int z, int dir);
         /** ルート入りチェスト。dir = チェストの正面 */
         void chest(int x, int y, int z, int dir);
+        /** オリジナル仕掛けブロック。kind は JUMP / SPEED / CHECK / GOAL / CRUMBLE / HEAL */
+        void gimmick(int x, int y, int z, int kind);
     }
+
+    public static final int JUMP = 0, SPEED = 1, CHECK = 2, GOAL = 3, CRUMBLE = 4, HEAL = 5;
 
     public enum Palette {
         OAK("オーク", Blocks.OAK_PLANKS, Blocks.OAK_LOG, Blocks.SPRUCE_PLANKS, Blocks.OAK_STAIRS, Blocks.OAK_SLAB, Blocks.GLASS, Blocks.GLOWSTONE),
@@ -118,7 +122,21 @@ public final class Blueprints {
         JUMPPARK("ジャンプ広場", "塔から飛び込むスライムの大きなジャンプ台"),
         MAZE("迷路", "中央にチェストがある迷路"),
         TRAPROOM("罠の部屋", "TNT地雷とクモの巣。奥のチェストを狙え"),
-        FOUNTAIN("噴水", "水が流れる噴水広場");
+        FOUNTAIN("噴水", "水が流れる噴水広場"),
+        CHURCH("教会", "ベンチと祭壇のある教会。チェスト入り"),
+        WINDMILL("風車", "はしごで登れる風車。羽根が回りそう"),
+        MARKET("屋台市場", "しましまテントの屋台が8つ並ぶ市場"),
+        GARDEN("庭園", "花畑と池と噴水のある庭園"),
+        SHRINE("神社", "鳥居の参道と本殿。賽銭チェスト入り"),
+        PK_STEPS("アスレ：空中ステップ", "空中の足場を登っていくアスレ。チェックポイントとゴール付き"),
+        PK_JUMP("アスレ：ジャンプ台島", "ジャンプ台で島から島へ飛び移るアスレ"),
+        PK_DASH("アスレ：ダッシュ", "ダッシュ台で大きな穴を飛び越えるアスレ"),
+        PK_CRUMBLE("アスレ：崩れる足場", "踏むと崩れる足場の橋。下はスライムのネット"),
+        PK_SPIRAL("アスレ：らせん", "塔のまわりをぐるぐる登るアスレ。下はスライム"),
+        PK_ICE("アスレ：氷の島", "つるつる氷の島を渡るアスレ。下はスライム"),
+        TOWN("町", "鳥居の入口、噴水広場、家8軒、塔、城まである大きな町"),
+        VILLAGE("村", "コテージとキノコ、風車、市場、庭園、神社のある村"),
+        FORTRESS("要塞", "外壁と四隅の塔、本丸、掩体と高台のある大きな要塞");
 
         public final String label;
         public final String desc;
@@ -156,6 +174,20 @@ public final class Blueprints {
             case MAZE -> maze(c, p);
             case TRAPROOM -> traproom(c, p);
             case FOUNTAIN -> fountain(c, p);
+            case CHURCH -> church(c, p);
+            case WINDMILL -> windmill(c, p);
+            case MARKET -> market(c, p);
+            case GARDEN -> garden(c, p);
+            case SHRINE -> shrine(c, p);
+            case PK_STEPS -> pkSteps(c, p);
+            case PK_JUMP -> pkJump(c, p);
+            case PK_DASH -> pkDash(c, p);
+            case PK_CRUMBLE -> pkCrumble(c, p);
+            case PK_SPIRAL -> pkSpiral(c, p);
+            case PK_ICE -> pkIce(c, p);
+            case TOWN -> town(c, p);
+            case VILLAGE -> village(c, p);
+            case FORTRESS -> fortress(c, p);
         }
     }
 
@@ -204,6 +236,39 @@ public final class Blueprints {
                 }
             }
         }
+    }
+
+    /** 別の建物を、ずらして・回転して置くための包み紙（町や村を作るのに使う） */
+    private static final class Shift implements Placer {
+        private final Placer p;
+        private final int dx, dz, rot;
+
+        Shift(Placer p, int dx, int dz, int rot) {
+            this.p = p;
+            this.dx = dx;
+            this.dz = dz;
+            this.rot = rot & 3;
+        }
+
+        private int tx(int x, int z) {
+            return switch (rot) { case 1 -> z; case 2 -> -x; case 3 -> -z; default -> x; } + dx;
+        }
+
+        private int tz(int x, int z) {
+            return switch (rot) { case 1 -> -x; case 2 -> -z; case 3 -> x; default -> z; } + dz;
+        }
+
+        public void set(int x, int y, int z, Block b) { p.set(tx(x, z), y, tz(x, z), b); }
+        public void stair(int x, int y, int z, Block b, int dir, boolean flip) { p.stair(tx(x, z), y, tz(x, z), b, (dir + rot) & 3, flip); }
+        public void slab(int x, int y, int z, Block b, boolean top) { p.slab(tx(x, z), y, tz(x, z), b, top); }
+        public void ladder(int x, int y, int z, int dir) { p.ladder(tx(x, z), y, tz(x, z), (dir + rot) & 3); }
+        public void chest(int x, int y, int z, int dir) { p.chest(tx(x, z), y, tz(x, z), (dir + rot) & 3); }
+        public void gimmick(int x, int y, int z, int kind) { p.gimmick(tx(x, z), y, tz(x, z), kind); }
+    }
+
+    /** dx, dz だけずらし、rot回(90度ずつ)回して置く */
+    private static Placer at(Placer p, int dx, int dz, int rot) {
+        return new Shift(p, dx, dz, rot);
     }
 
     /** 反り屋根のひさし（外周に階段、中は床） */
@@ -859,6 +924,425 @@ public final class Blueprints {
         p.set(-5, 0, 3, Blocks.POTTED_DANDELION);
         p.set(5, 0, 11, Blocks.POTTED_CORNFLOWER);
         p.set(-5, 0, 11, Blocks.POTTED_BLUE_ORCHID);
+    }
+
+    // ================= 建物 26〜30 =================
+
+    private static void church(Palette c, Placer p) {
+        shell(p, -3, -1, 2, 3, 5, 12, c.wall);
+        fill(p, -3, -1, 2, 3, -1, 12, c.floor);
+        fill(p, -3, 5, 2, 3, 5, 12, c.floor);
+        for (int x : new int[]{-3, 3})
+            for (int z : new int[]{2, 7, 12})
+                fill(p, x, 0, z, x, 4, z, c.frame);
+        for (int x : new int[]{-3, 3}) {
+            fill(p, x, 1, 4, x, 3, 5, c.glass);
+            fill(p, x, 1, 9, x, 3, 10, c.glass);
+        }
+        fill(p, -1, 1, 12, 1, 3, 12, c.glass);
+        gable(p, c, -4, 4, 1, 13, 6, 2, 12);
+        // 鐘楼
+        shell(p, -2, -1, 0, 2, 9, 4, c.wall);
+        fill(p, -2, -1, 0, 2, -1, 4, c.floor);
+        for (int x : new int[]{-2, 2})
+            for (int z : new int[]{0, 4})
+                fill(p, x, 0, z, x, 8, z, c.frame);
+        fill(p, 0, 0, 0, 0, 2, 0, AIR);
+        fill(p, -1, 5, 0, 1, 7, 0, c.glass);
+        gable(p, c, -3, 3, -1, 5, 10, 0, 4);
+        p.set(0, 8, 2, c.light);
+        // 中
+        for (int z : new int[]{5, 7, 9})
+            for (int x : new int[]{-2, -1, 1, 2})
+                p.stair(x, 0, z, c.stair, 2, false);
+        p.set(0, 4, 7, c.light);
+        p.set(0, 4, 10, c.light);
+        p.chest(0, 0, 11, 2);
+        p.set(-2, 0, 11, Blocks.POTTED_POPPY);
+        p.set(2, 0, 11, Blocks.POTTED_CORNFLOWER);
+    }
+
+    private static void windmill(Palette c, Placer p) {
+        cyl(p, 0, 4, -1, 3.5, -1, -1, c.floor);
+        for (int y = 0; y <= 14; y++)
+            cyl(p, 0, 4, 2.5, 3.5, y, y, ((y / 3) % 2 == 0) ? c.wall : c.frame);
+        cyl(p, 0, 4, -1, 2.5, 0, 14, AIR);
+        fill(p, 1, 0, 1, 1, 1, 1, AIR);
+        cyl(p, 0, 4, -1, 4.0, 15, 15, c.floor);
+        p.set(0, 15, 2, AIR);
+        for (int y = 0; y <= 15; y++)
+            p.ladder(0, y, 2, 0);
+        cyl(p, 0, 4, -1, 3.0, 16, 16, c.floor);
+        cyl(p, 0, 4, -1, 2.0, 17, 17, c.floor);
+        cyl(p, 0, 4, -1, 1.0, 18, 18, c.frame);
+        p.set(0, 14, 5, c.light);
+        p.chest(1, 0, 3, 2);
+        // 羽根
+        p.set(0, 12, 0, c.frame);
+        fill(p, -7, 12, -1, 7, 12, -1, c.frame);
+        fill(p, 0, 5, -1, 0, 19, -1, c.frame);
+        for (int k = 2; k <= 7; k++) {
+            p.set(k, 13, -1, Blocks.WHITE_WOOL);
+            p.set(-k, 11, -1, Blocks.WHITE_WOOL);
+        }
+        for (int k = 1; k <= 7; k++) {
+            p.set(1, 12 + k, -1, Blocks.WHITE_WOOL);
+            p.set(-1, 12 - k, -1, Blocks.WHITE_WOOL);
+        }
+    }
+
+    private static void marketRow(Palette c, Placer p, boolean withChest) {
+        int[] xs = {-6, -2, 2, 6};
+        Block[] wool = {Blocks.RED_WOOL, Blocks.BLUE_WOOL, Blocks.YELLOW_WOOL, Blocks.GREEN_WOOL};
+        for (int i = 0; i < 4; i++) {
+            int cx = xs[i];
+            for (int x = cx - 1; x <= cx + 1; x += 2)
+                for (int z : new int[]{2, 4})
+                    fill(p, x, 0, z, x, 2, z, c.frame);
+            fill(p, cx - 1, 0, 4, cx + 1, 2, 4, c.wall);
+            fill(p, cx - 1, 0, 2, cx + 1, 0, 2, c.wall);
+            for (int x = cx - 2; x <= cx + 2; x++)
+                for (int z = 1; z <= 5; z++)
+                    p.set(x, 3, z, (((x + z) & 1) == 0) ? wool[i] : Blocks.WHITE_WOOL);
+            for (int x = cx - 2; x <= cx + 2; x++)
+                p.set(x, 2, 1, (x & 1) == 0 ? wool[i] : Blocks.WHITE_WOOL);
+            p.set(cx, 1, 2, (i % 2 == 0) ? Blocks.CAKE : Blocks.POTTED_POPPY);
+            p.set(cx, 2, 3, c.light);
+            if (withChest && i == 1) p.chest(cx, 0, 3, 2);
+        }
+    }
+
+    private static void market(Palette c, Placer p) {
+        fill(p, -9, -1, -1, 9, -1, 14, c.floor);
+        marketRow(c, p, true);
+        marketRow(c, at(p, 0, 13, 2), false);
+        fill(p, 0, 0, 6, 0, 2, 6, c.frame);
+        p.set(0, 3, 6, Blocks.LANTERN);
+        fill(p, 0, 0, 7, 0, 2, 7, c.frame);
+        p.set(0, 3, 7, Blocks.LANTERN);
+    }
+
+    private static void garden(Palette c, Placer p) {
+        Block[] fl = {Blocks.POPPY, Blocks.DANDELION, Blocks.AZURE_BLUET, Blocks.CORNFLOWER, Blocks.PINK_TULIP,
+                Blocks.ALLIUM, Blocks.OXEYE_DAISY, Blocks.RED_TULIP, Blocks.ORANGE_TULIP, Blocks.BLUE_ORCHID};
+        fill(p, -7, -1, 0, 7, -1, 14, Blocks.GRASS_BLOCK);
+        fill(p, -1, -1, 0, 1, -1, 14, c.floor);
+        fill(p, -7, -1, 6, 7, -1, 8, c.floor);
+        for (int x = -7; x <= 7; x++)
+            for (int z = 0; z <= 14; z++) {
+                boolean path = Math.abs(x) <= 1 || (z >= 6 && z <= 8);
+                if (!path && ((x + z) & 1) == 0)
+                    p.set(x, 0, z, fl[Math.floorMod(x * 7 + z * 3, fl.length)]);
+            }
+        // 池
+        fill(p, -1, -2, 6, 1, -2, 8, c.floor);
+        fill(p, -1, -1, 6, 1, -1, 8, Blocks.WATER);
+        for (int x = -2; x <= 2; x++)
+            for (int z = 5; z <= 9; z++)
+                if (x == -2 || x == 2 || z == 5 || z == 9)
+                    p.set(x, -1, z, c.wall);
+        // 外のさく
+        for (int x = -7; x <= 7; x++)
+            for (int z = 0; z <= 14; z++)
+                if ((x == -7 || x == 7 || z == 0 || z == 14) && !(Math.abs(x) <= 1 && z == 0))
+                    p.set(x, 0, z, Blocks.OAK_FENCE);
+        for (int sx : new int[]{-1, 1})
+            for (int sz : new int[]{3, 11}) {
+                fill(p, 5 * sx, 0, sz, 5 * sx, 1, sz, c.frame);
+                p.set(5 * sx, 2, sz, Blocks.LANTERN);
+            }
+        p.stair(-3, 0, 7, c.stair, 3, false);
+        p.stair(3, 0, 7, c.stair, 1, false);
+        p.chest(6, 0, 2, 3);
+    }
+
+    private static void toriiGate(Palette c, Placer p, int z) {
+        for (int x : new int[]{-3, 3})
+            fill(p, x, -1, z, x, 5, z, c.frame);
+        fill(p, -4, 4, z, 4, 4, z, c.frame);
+        fill(p, -5, 6, z, 5, 6, z, c.wall);
+        for (int x = -6; x <= 6; x++)
+            p.slab(x, 7, z, c.slab, false);
+        p.set(-2, 3, z, c.light);
+        p.set(2, 3, z, c.light);
+    }
+
+    private static void shrine(Palette c, Placer p) {
+        fill(p, -1, -1, -14, 1, -1, 0, c.floor);
+        toriiGate(c, p, -12);
+        toriiGate(c, p, -7);
+        for (int z : new int[]{-10, -4})
+            for (int x : new int[]{-2, 2}) {
+                fill(p, x, 0, z, x, 1, z, c.frame);
+                p.set(x, 2, z, Blocks.LANTERN);
+            }
+        fill(p, -5, 0, 0, 5, 0, 10, c.floor);
+        for (int x = -1; x <= 1; x++) p.stair(x, 0, -1, c.stair, 0, false);
+        shell(p, -3, 0, 2, 3, 5, 9, c.wall);
+        for (int x : new int[]{-3, 3})
+            for (int z : new int[]{2, 9})
+                fill(p, x, 1, z, x, 4, z, c.frame);
+        fill(p, 0, 1, 2, 0, 2, 2, AIR);
+        for (int x : new int[]{-3, 3}) fill(p, x, 2, 5, x, 3, 5, c.glass);
+        gable(p, c, -5, 5, 1, 10, 6, 2, 9);
+        p.set(0, 4, 5, c.light);
+        p.chest(0, 1, 8, 2);
+        p.chest(-2, 1, 1, 2);
+        p.set(2, 1, 1, Blocks.POTTED_CORNFLOWER);
+    }
+
+    // ================= アスレ 31〜36 =================
+
+    /** ゴール台（5x5）とゴールブロック */
+    private static void goalPad(Palette c, Placer p, int cx, int y, int z) {
+        fill(p, cx - 2, y, z, cx + 2, y, z + 4, c.floor);
+        p.gimmick(cx, y, z + 2, GOAL);
+        for (int sx : new int[]{-2, 2}) {
+            fill(p, cx + sx, y + 1, z, cx + sx, y + 2, z, c.frame);
+            p.set(cx + sx, y + 3, z, c.light);
+            fill(p, cx + sx, y + 1, z + 4, cx + sx, y + 2, z + 4, c.frame);
+            p.set(cx + sx, y + 3, z + 4, c.light);
+        }
+    }
+
+    private static void pkSteps(Palette c, Placer p) {
+        fill(p, -2, -1, -2, 2, -1, 2, c.floor);
+        p.gimmick(0, -1, 0, CHECK);
+        int n = 24;
+        for (int i = 0; i < n; i++) {
+            int m = i % 4;
+            int x = (m == 1) ? 2 : (m == 3 ? -2 : 0);
+            int z = 4 + 3 * i;
+            int y = -1 + (i + 1) / 2;
+            if (i % 5 == 4) {
+                p.set(x, y, z, c.frame);
+            } else {
+                fill(p, x - 1, y, z, x, y, z + 1, c.wall);
+                p.set(x, y, z, c.frame);
+            }
+            p.set(x, y - 1, z, c.light);
+            if (i % 6 == 5) p.gimmick(x, y, z, CHECK);
+        }
+        goalPad(c, p, 0, -1 + n / 2, 4 + 3 * n);
+    }
+
+    private static void pkJump(Palette c, Placer p) {
+        fill(p, -3, -1, -3, 3, -1, 3, c.floor);
+        p.gimmick(0, -1, 0, CHECK);
+        int n = 8;
+        for (int i = 0; i < n; i++) {
+            int ox = (i % 2 == 0) ? 0 : (i % 4 == 1 ? 3 : -3);
+            int z = 9 + 10 * i;
+            int y = -1 + 2 * (i + 1);
+            fill(p, ox - 2, y, z, ox + 2, y, z + 4, c.floor);
+            for (int x = ox - 2; x <= ox + 2; x++) {
+                p.set(x, y, z, c.frame);
+                p.set(x, y, z + 4, c.frame);
+            }
+            p.set(ox, y - 1, z + 2, c.light);
+            p.gimmick(ox, y, z, CHECK);
+            p.gimmick(ox, y, z + 4, JUMP);
+        }
+        // 最初の島へ行くジャンプ台
+        p.gimmick(0, -1, 3, JUMP);
+        // ゴール
+        int zg = 9 + 10 * n;
+        goalPad(c, p, 0, -1 + 2 * (n + 1), zg);
+    }
+
+    private static void pkDash(Palette c, Placer p) {
+        // 先に穴を掘る（落ちたらスライムで跳ね返る）
+        fill(p, -4, -5, 4, 4, -1, 9 + 9 * 8 + 5, AIR);
+        fill(p, -4, -6, 4, 4, -6, 9 + 9 * 8 + 5, Blocks.SLIME_BLOCK);
+        fill(p, -3, -1, -3, 3, -1, 3, c.floor);
+        p.gimmick(0, -1, 0, CHECK);
+        p.gimmick(0, -1, 3, SPEED);
+        int n = 8;
+        for (int i = 0; i < n; i++) {
+            int z = 9 + 9 * i;
+            fill(p, -1, -1, z, 1, -1, z + 2, c.wall);
+            for (int x : new int[]{-1, 1}) p.set(x, -1, z + 1, c.frame);
+            p.set(0, -2, z + 1, c.light);
+            if (i % 3 == 2) p.gimmick(0, -1, z, CHECK);
+            p.gimmick(0, -1, z + 2, SPEED);
+        }
+        goalPad(c, p, 0, -1, 9 + 9 * n);
+    }
+
+    private static void startTower(Palette c, Placer p, int y) {
+        fill(p, 0, -1, -3, 0, y - 1, -3, c.frame);
+        fill(p, -2, y, -3, 2, y, 1, c.floor);
+        for (int k = 0; k <= y; k++) p.ladder(0, k, -4, 2);
+        p.gimmick(0, y, 0, CHECK);
+        p.set(-2, y + 1, -3, c.light);
+        p.set(2, y + 1, -3, c.light);
+    }
+
+    private static void pkCrumble(Palette c, Placer p) {
+        int y = 8;
+        startTower(c, p, y);
+        int len = 32;
+        for (int z = 2; z <= len; z++)
+            for (int x = -1; x <= 1; x++) {
+                boolean hole = (z % 4 == 2) && (x == ((z / 4) % 3) - 1) && z % 10 != 0;
+                if (z % 10 == 0) {
+                    p.set(x, y, z, c.floor);
+                    if (x == 0) p.gimmick(0, y, z, CHECK);
+                } else if (!hole) {
+                    p.gimmick(x, y, z, CRUMBLE);
+                }
+            }
+        for (int z : new int[]{10, 20, 30}) {
+            fill(p, 0, -1, z, 0, y - 1, z, c.frame);
+            p.set(-1, y + 1, z, Blocks.LANTERN);
+            p.set(1, y + 1, z, Blocks.LANTERN);
+        }
+        goalPad(c, p, 0, y, len + 1);
+        fill(p, -3, -1, -4, 3, -1, len + 7, Blocks.SLIME_BLOCK);
+        fill(p, 0, -1, -3, 0, -1, -3, c.frame);
+    }
+
+    private static void pkSpiral(Palette c, Placer p) {
+        // 中心 (0, 6)
+        cyl(p, 0, 6, -1, 8.0, -1, -1, Blocks.SLIME_BLOCK);
+        cyl(p, 0, 6, -1, 1.2, -1, 22, c.frame);
+        for (int i = 0; i < 24; i++) {
+            double a = i * 0.7;
+            int x = (int) Math.round(4.2 * Math.cos(a));
+            int z = 6 + (int) Math.round(4.2 * Math.sin(a));
+            int y = i - 1;
+            fill(p, x, y, z, x + 1, y, z + 1, c.wall);
+            p.set(x, y, z, c.frame);
+            p.set(x, y - 1, z, c.light);
+            if (i % 8 == 7) p.gimmick(x, y, z, CHECK);
+        }
+        cyl(p, 0, 6, -1, 3.0, 23, 23, c.floor);
+        p.gimmick(0, 23, 9, GOAL);
+        p.set(0, 24, 6, c.light);
+    }
+
+    private static void pkIce(Palette c, Placer p) {
+        int y = 6;
+        startTower(c, p, y);
+        int n = 10;
+        for (int i = 0; i < n; i++) {
+            int ox = (i % 2 == 0) ? -2 : 2;
+            int z = 5 + 5 * i;
+            fill(p, ox - 1, y, z, ox + 1, y, z + 2, Blocks.BLUE_ICE);
+            p.set(ox, y - 1, z + 1, c.light);
+            if (i % 3 == 2) p.gimmick(ox, y, z + 1, CHECK);
+        }
+        goalPad(c, p, 0, y, 5 + 5 * n);
+        fill(p, -6, -1, -4, 6, -1, 5 + 5 * n + 6, Blocks.SLIME_BLOCK);
+        fill(p, 0, -1, -3, 0, -1, -3, c.frame);
+    }
+
+    // ================= 町サイズ 37〜39 =================
+
+    private static void lampPost(Palette c, Placer p, int x, int z) {
+        fill(p, x, 0, z, x, 2, z, c.frame);
+        p.set(x, 3, z, Blocks.LANTERN);
+    }
+
+    private static void town(Palette c, Placer p) {
+        // 道路
+        fill(p, -2, -1, 0, 2, -1, 49, c.floor);
+        fill(p, -24, -1, 22, 24, -1, 26, c.floor);
+        // 入口の鳥居
+        fill(p, -1, -1, -9, 1, -1, -1, c.floor);
+        toriiGate(c, p, -4);
+        toriiGate(c, p, -9);
+        // 噴水広場
+        fountain(c, at(p, 0, 17, 0));
+        // 道ぞいの家 (左は rot=3、右は rot=1 で道のほうに玄関を向ける)
+        for (int dz : new int[]{8, 17, 31, 40}) {
+            house(c, at(p, -4, dz, 3));
+            house(c, at(p, 4, dz, 1));
+        }
+        // 街灯
+        for (int z : new int[]{4, 12, 20, 28, 36, 44}) {
+            lampPost(c, p, -3, z);
+            lampPost(c, p, 3, z);
+        }
+        // 左の区画
+        mushroom(c, at(p, -17, 3, 0));
+        pagoda(c, at(p, -17, 12, 0));
+        lighthouse(c, at(p, -17, 29, 0));
+        camp(c, at(p, -18, 40, 0));
+        // 右の区画
+        cottage(c, at(p, 17, 3, 0));
+        dome(c, at(p, 17, 10, 0));
+        treehouse(c, at(p, 17, 31, 0));
+        bunker(c, at(p, 17, 40, 0));
+        // 北の端に城
+        castle(c, at(p, 0, 50, 0));
+    }
+
+    private static void village(Palette c, Placer p) {
+        fill(p, -2, -1, 0, 2, -1, 44, c.floor);
+        fill(p, -22, -1, 18, 22, -1, 22, c.floor);
+        fountain(c, at(p, 0, 13, 0));
+        for (int dz : new int[]{5, 12, 28, 36}) {
+            cottage(c, at(p, -5, dz, 3));
+            cottage(c, at(p, 5, dz, 1));
+        }
+        for (int z : new int[]{4, 10, 26, 32, 38}) {
+            lampPost(c, p, -3, z);
+            lampPost(c, p, 3, z);
+        }
+        mushroom(c, at(p, -17, 5, 0));
+        garden(c, at(p, 18, 6, 0));
+        windmill(c, at(p, -17, 29, 0));
+        market(c, at(p, 17, 27, 0));
+        camp(c, at(p, -17, 41, 0));
+        church(c, at(p, 17, 46, 0));
+        shrine(c, at(p, 0, 56, 0));
+        torii(c, at(p, 0, -14, 0));
+    }
+
+    private static void fortress(Palette c, Placer p) {
+        // 外壁 (x -20..20, z 0..40)
+        fill(p, -20, -1, 0, 20, -1, 40, c.floor);
+        fill(p, -20, 0, 0, 20, 5, 0, c.wall);
+        fill(p, -20, 0, 40, 20, 5, 40, c.wall);
+        fill(p, -20, 0, 0, -20, 5, 40, c.wall);
+        fill(p, 20, 0, 0, 20, 5, 40, c.wall);
+        for (int x = -20; x <= 20; x += 2) {
+            p.set(x, 6, 0, c.wall);
+            p.set(x, 6, 40, c.wall);
+        }
+        for (int z = 0; z <= 40; z += 2) {
+            p.set(-20, 6, z, c.wall);
+            p.set(20, 6, z, c.wall);
+        }
+        for (int x = -20; x <= 20; x += 8) {
+            fill(p, x, 0, 0, x, 6, 0, c.frame);
+            fill(p, x, 0, 40, x, 6, 40, c.frame);
+        }
+        // 四隅の塔
+        tower(c, at(p, -20, -2, 0));
+        tower(c, at(p, 20, -2, 0));
+        tower(c, at(p, -20, 38, 0));
+        tower(c, at(p, 20, 38, 0));
+        // 正門
+        fill(p, -2, 0, 0, 2, 4, 0, AIR);
+        fill(p, -3, 0, 0, -3, 5, 0, c.frame);
+        fill(p, 3, 0, 0, 3, 5, 0, c.frame);
+        fill(p, -3, 5, 0, 3, 5, 0, c.frame);
+        // 本丸
+        castle(c, at(p, 0, 20, 0));
+        // 庭の施設
+        fill(p, -2, -1, 1, 2, -1, 19, c.floor);
+        bunker(c, at(p, -14, 2, 0));
+        bunker(c, at(p, 14, 2, 0));
+        deck(c, at(p, -15, 19, 0));
+        deck(c, at(p, 15, 19, 0));
+        sniper(c, at(p, -16, 28, 0));
+        sniper(c, at(p, 16, 28, 0));
+        for (int z : new int[]{6, 12, 18}) {
+            lampPost(c, p, -4, z);
+            lampPost(c, p, 4, z);
+        }
     }
 
     private Blueprints() {}

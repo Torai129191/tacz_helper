@@ -25,6 +25,13 @@ public class ModBlocks {
     public static final RegistryObject<Block> GAME_SETTINGS = reg("game_settings", FunctionBlock.Type.SETTINGS);
     public static final RegistryObject<Block> GAME_START = reg("game_start", FunctionBlock.Type.START);
 
+    public static final RegistryObject<Block> JUMP_PAD = gim("jump_pad", GimmickBlock.Kind.JUMP, 1.0F);
+    public static final RegistryObject<Block> SPEED_PAD = gim("speed_pad", GimmickBlock.Kind.SPEED, 1.0F);
+    public static final RegistryObject<Block> CHECKPOINT = gim("checkpoint", GimmickBlock.Kind.CHECKPOINT, 1.0F);
+    public static final RegistryObject<Block> GOAL = gim("goal", GimmickBlock.Kind.GOAL, 1.0F);
+    public static final RegistryObject<Block> CRUMBLE = gim("crumble", GimmickBlock.Kind.CRUMBLE, 0.5F);
+    public static final RegistryObject<Block> HEAL_PAD = gim("heal_pad", GimmickBlock.Kind.HEAL, 1.0F);
+
     public static final RegistryObject<CreativeModeTab> TAB = TABS.register("main", () ->
             CreativeModeTab.builder()
                     .title(Component.literal("TaC2Z Helper"))
@@ -34,9 +41,22 @@ public class ModBlocks {
                         out.accept(GAME_SETTINGS.get());
                         out.accept(SPAWN_POINT.get());
                         out.accept(LOOT_SPAWNER.get());
+                        out.accept(JUMP_PAD.get());
+                        out.accept(SPEED_PAD.get());
+                        out.accept(CHECKPOINT.get());
+                        out.accept(GOAL.get());
+                        out.accept(CRUMBLE.get());
+                        out.accept(HEAL_PAD.get());
                         ModItems.BOTTLES.forEach(o -> out.accept(o.get()));
                     })
                     .build());
+
+    private static RegistryObject<Block> gim(String name, GimmickBlock.Kind kind, float strength) {
+        RegistryObject<Block> b = BLOCKS.register(name,
+                () -> new GimmickBlock(BlockBehaviour.Properties.of().strength(strength), kind));
+        ITEMS.register(name, () -> new BlockItem(b.get(), new Item.Properties()));
+        return b;
+    }
 
     private static RegistryObject<Block> reg(String name, FunctionBlock.Type type) {
         RegistryObject<Block> b = BLOCKS.register(name,

@@ -14,5 +14,6 @@ public class TaczHelper {
         ModBlocks.ITEMS.register(bus);
         ModBlocks.TABS.register(bus);
         ModItems.ITEMS.register(bus);
+        ModEntities.ENTITIES.register(bus);
     }
 }

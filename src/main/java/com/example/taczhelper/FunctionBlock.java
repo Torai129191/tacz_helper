@@ -60,10 +60,7 @@ public class FunctionBlock extends Block {
             return InteractionResult.CONSUME;
         }
 
-        GameData d = GameData.get(server);
-        if (player.isShiftKeyDown()) d.nextSetting();
-        else d.cycleCurrent();
-        player.displayClientMessage(Component.literal(d.describeCurrent()), true);
+        SettingsMenu.open(sp, pos);
         return InteractionResult.CONSUME;
     }
 }

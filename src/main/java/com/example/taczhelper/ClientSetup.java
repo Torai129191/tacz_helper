@@ -2,6 +2,7 @@ package com.example.taczhelper;
 
 import net.minecraft.world.item.Item;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.RegisterColorHandlersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -20,6 +21,11 @@ public final class ClientSetup {
             }
             return 0xFFFFFFFF;
         }, items);
+    }
+
+    @SubscribeEvent
+    public static void onRenderers(EntityRenderersEvent.RegisterRenderers e) {
+        e.registerEntityRenderer(ModEntities.BATTLE_BUS.get(), BattleBusRenderer::new);
     }
 
     private ClientSetup() {}

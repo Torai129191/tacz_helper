@@ -37,9 +37,9 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-// ---- 建築ボトル1000個ぶんのアイテムモデルをビルド時に自動生成 ----
+// ---- 建築ボトル1560個ぶんのアイテムモデルをビルド時に自動生成 ----
 // （GitHubのアップロードが1回100ファイルまでなので、自動で作る）
-def bottleShapes = ['house', 'tower', 'sniper', 'wall', 'pyramid', 'bridge', 'deck', 'bunker', 'arena', 'castle', 'cottage', 'mushroom', 'pagoda', 'torii', 'dome', 'lighthouse', 'treehouse', 'camp', 'rocket', 'ufo', 'slide', 'jumppark', 'maze', 'traproom', 'fountain']
+def bottleShapes = ['house', 'tower', 'sniper', 'wall', 'pyramid', 'bridge', 'deck', 'bunker', 'arena', 'castle', 'cottage', 'mushroom', 'pagoda', 'torii', 'dome', 'lighthouse', 'treehouse', 'camp', 'rocket', 'ufo', 'slide', 'jumppark', 'maze', 'traproom', 'fountain', 'church', 'windmill', 'market', 'garden', 'shrine', 'pk_steps', 'pk_jump', 'pk_dash', 'pk_crumble', 'pk_spiral', 'pk_ice', 'town', 'village', 'fortress']
 def bottlePalettes = ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'darkoak', 'mangrove', 'cherry', 'bamboo', 'crimson', 'warped', 'cobble', 'mossy', 'stonebrick', 'brick', 'sand', 'redsand', 'quartz', 'prismarine', 'deepslate', 'blackstone', 'netherbrick', 'endstone', 'obsidian', 'mud', 'white', 'pink', 'red', 'orange', 'yellow', 'lime', 'green', 'cyan', 'lightblue', 'blue', 'purple', 'magenta', 'gray', 'black', 'gold']
 def generatedAssets = layout.buildDirectory.dir('generated/bottle-assets').get().asFile
 
@@ -48,6 +48,17 @@ tasks.register('generateBottleAssets') {
     doLast {
         def itemDir = new File(generatedAssets, 'assets/taczhelper/models/item')
         itemDir.mkdirs()
+        // 新しい仕掛けブロックのモデル（ファイル数を減らすため自動生成）
+        def gimmickBlocks = ['jump_pad', 'speed_pad', 'checkpoint', 'goal', 'crumble', 'heal_pad']
+        gimmickBlocks.each { n ->
+            def bsDir = new File(generatedAssets, 'assets/taczhelper/blockstates')
+            def bmDir = new File(generatedAssets, 'assets/taczhelper/models/block')
+            bsDir.mkdirs()
+            bmDir.mkdirs()
+            new File(bsDir, n + '.json').setText('{"variants":{"":{"model":"taczhelper:block/' + n + '"}}}', 'UTF-8')
+            new File(bmDir, n + '.json').setText('{"parent":"minecraft:block/cube_all","textures":{"all":"taczhelper:block/' + n + '"}}', 'UTF-8')
+            new File(itemDir, n + '.json').setText('{"parent":"taczhelper:block/' + n + '"}', 'UTF-8')
+        }
         bottleShapes.each { shapeId ->
             bottlePalettes.each { palId ->
                 def id = "bottle_${shapeId}_${palId}"

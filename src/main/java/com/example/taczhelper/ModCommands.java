@@ -41,6 +41,11 @@ public final class ModCommands {
                     GameManager.start(c.getSource().getServer(), BlockPos.containing(c.getSource().getPosition()));
                     return 1;
                 }))
+                .then(Commands.literal("menu").executes(c -> {
+                    ServerPlayer sp = c.getSource().getPlayerOrException();
+                    SettingsMenu.open(sp, sp.blockPosition());
+                    return 1;
+                }))
                 .then(Commands.literal("stop").executes(c -> {
                     GameManager.stop(c.getSource().getServer());
                     return 1;
